@@ -4,6 +4,8 @@ import java.io.PrintWriter;
 import java.util.Random;
 
 /**
+ * Генерирует тестовый файл с STRING_COUNT случайных строк из [a-zA-Z] c длинами из интервала [MIN_LENGTH; MAX_LENGTH].
+ *
  * @author <a href="mailto:oleg.larionov@odnoklassniki.ru">Oleg Larionov</a>
  */
 public class Generator {

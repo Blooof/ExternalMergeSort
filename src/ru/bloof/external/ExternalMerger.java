@@ -11,10 +11,18 @@ import java.util.PriorityQueue;
 
 import static java.lang.String.format;
 
+/**
+ * Сортирует файл INPUT_FILE_NAME с использованием диска. Использует FREE_MEMORY_MULTIPLIER% от доступной для JVM памяти.
+ * Разделяет исходный файл на файлы примерно по (0.8 * MAX_SIZE_BYTES / 2) байт.
+ * При этом с диска читает блоками по (0.1 * MAX_SIZE_BYTES) байт. Далее каждые MAX_MERGE_FILES мержит в файл побольше,
+ * пока не останется один файл-результат. При этом создает буферы чтения практически на всю доступную память.
+ * Результат находится в файле OUTPUT_FILE_NAME.
+ * Сортировка запускается RUN_COUNT раз, после чего по всем запускам считается среднее время.
+ */
 public class ExternalMerger {
     public static final String INPUT_FILE_NAME = "input.txt";
     public static final String OUTPUT_FILE_NAME = "output.txt";
-    public static final String TMP_SORT_FILE_PATTERN = "tmp/tmp_step%d_%d.txt";
+    public static final String TMP_SORT_FILE_PATTERN = "tmp_step%d_%d.txt";
     public static final double FREE_MEMORY_MULTIPLIER = 0.85;
     public static final int MAX_MERGE_FILES = 10;
     public static final int RUN_COUNT = 1;
@@ -100,7 +108,7 @@ public class ExternalMerger {
     private static int sortAndPrintStrings(int outFilesCount, List<String> stringsToSort) throws FileNotFoundException {
         print(format("Sorting %d file with %d strings", outFilesCount + 1, stringsToSort.size()));
         stringsToSort.sort(String::compareTo);
-        try (PrintWriter outWriter = new PrintWriter(format(TMP_SORT_FILE_PATTERN, 0, ++outFilesCount - 1))) {
+        try (PrintWriter outWriter = createPrintWriter(format(TMP_SORT_FILE_PATTERN, 0, ++outFilesCount - 1), (int) (0.05 * MAX_SIZE_BYTES))) {
             stringsToSort.forEach(outWriter::println);
         }
         return outFilesCount;
@@ -112,15 +120,15 @@ public class ExternalMerger {
             outFilesAfterStep++;
         }
         for (int i = 0; i < outFilesAfterStep; i++) {
-            try (PrintWriter pw = new PrintWriter(format(TMP_SORT_FILE_PATTERN, step, i))) {
-                int firstFileNum = i * MAX_MERGE_FILES;
-                int lastFileNum = Math.min(outFilesCount - 1, (i + 1) * MAX_MERGE_FILES - 1);
-                int count = lastFileNum - firstFileNum + 1;
+            int firstFileNum = i * MAX_MERGE_FILES;
+            int lastFileNum = Math.min(outFilesCount - 1, (i + 1) * MAX_MERGE_FILES - 1);
+            int count = lastFileNum - firstFileNum + 1;
+            try (PrintWriter pw = createPrintWriter(format(TMP_SORT_FILE_PATTERN, step, i), MAX_SIZE_BYTES / (2 * count))) {
                 print(format("Merging %d files", count));
                 PriorityQueue<FileIterator> heap = new PriorityQueue<>();
                 for (int j = firstFileNum; j <= lastFileNum; j++) {
                     heap.add(new FileIterator(new BufferedReader(new FileReader(format(TMP_SORT_FILE_PATTERN, step - 1, j)),
-                            MAX_SIZE_BYTES / (3 * count))));
+                            MAX_SIZE_BYTES / (2 * count))));
                 }
 
                 while (!heap.isEmpty()) {
@@ -136,6 +144,11 @@ public class ExternalMerger {
             System.gc();
         }
         return outFilesAfterStep;
+    }
+
+    public static PrintWriter createPrintWriter(String fileName, int size) throws FileNotFoundException {
+        return new PrintWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fileName)), size),
+                false);
     }
 
     public static class FileIterator implements Comparable<FileIterator> {

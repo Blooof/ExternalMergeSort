@@ -6,6 +6,8 @@ import java.io.FileReader;
 import java.io.IOException;
 
 /**
+ * Проверяет, что строки в файле отсортированы в лексикографическом порядке.
+ *
  * @author <a href="mailto:blloof@gmail.com">Oleg Larionov</a>
  */
 public class Checker {
@@ -23,7 +25,7 @@ public class Checker {
                     System.out.println("Oops, file is not sorted");
                 }
             }
-        };
+        }
         System.out.println("All right!");
     }
 }
