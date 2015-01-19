@@ -15,7 +15,7 @@ public class Generator {
         Random rnd = new Random();
         int minCharNum = (int) 'A';
         int maxCharNum = (int) 'z';
-        try (PrintWriter pw = new PrintWriter(Main.INPUT_FILE_NAME)) {
+        try (PrintWriter pw = new PrintWriter(ExternalMerger.INPUT_FILE_NAME)) {
             for (int i = 0; i < STRING_COUNT; i++) {
                 int length = rnd.nextInt(MAX_LENGTH - MIN_LENGTH) + MIN_LENGTH;
                 StringBuilder sb = new StringBuilder(length);
