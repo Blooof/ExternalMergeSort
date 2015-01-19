@@ -4,7 +4,7 @@ import java.io.PrintWriter;
 import java.util.Random;
 
 /**
- * Генерирует тестовый файл с STRING_COUNT случайных строк из [a-zA-Z] c длинами из интервала [MIN_LENGTH; MAX_LENGTH].
+ * Генерирует тестовый файл с STRING_COUNT случайных строк из [A-z] c длинами из интервала [MIN_LENGTH; MAX_LENGTH].
  *
  * @author <a href="mailto:oleg.larionov@odnoklassniki.ru">Oleg Larionov</a>
  */
@@ -17,7 +17,7 @@ public class Generator {
         Random rnd = new Random();
         int minCharNum = (int) 'A';
         int maxCharNum = (int) 'z';
-        try (PrintWriter pw = new PrintWriter(ExternalMerger.INPUT_FILE_NAME)) {
+        try (PrintWriter pw = ExternalMerger.createPrintWriter(ExternalMerger.INPUT_FILE_NAME, 100 * 1024 * 1024)) {
             for (int i = 0; i < STRING_COUNT; i++) {
                 int length = rnd.nextInt(MAX_LENGTH - MIN_LENGTH) + MIN_LENGTH;
                 StringBuilder sb = new StringBuilder(length);

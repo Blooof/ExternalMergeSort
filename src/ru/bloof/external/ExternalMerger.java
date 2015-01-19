@@ -13,7 +13,7 @@ import static java.lang.String.format;
 
 /**
  * Сортирует файл INPUT_FILE_NAME с использованием диска. Использует FREE_MEMORY_MULTIPLIER% от доступной для JVM памяти.
- * Доступную память регулировать через команду JVM -Xmx. Тестировалось при доступной памяти от 300M до 2G.
+ * Доступную память регулировать через ключ JVM -Xmx. Тестировалось при доступной памяти от 300M до 2G.
  * Разделяет исходный файл на файлы примерно по (0.8 * MAX_SIZE_BYTES / 2) байт.
  * При этом с диска читает блоками по (0.1 * MAX_SIZE_BYTES) байт. Далее каждые MAX_MERGE_FILES мержит в файл побольше,
  * пока не останется один файл-результат. При этом создает буферы чтения практически на всю доступную память.
@@ -23,8 +23,9 @@ import static java.lang.String.format;
 public class ExternalMerger {
     public static final String INPUT_FILE_NAME = "input.txt";
     public static final String OUTPUT_FILE_NAME = "output.txt";
-    public static final String TMP_SORT_FILE_PATTERN = "tmp_step%d_%d.txt";
-    public static final double FREE_MEMORY_MULTIPLIER = 0.85;
+    public static final String TMP_DIR = "tmp/";
+    public static final String TMP_SORT_FILE_PATTERN = TMP_DIR + "tmp_step%d_%d.txt";
+    public static final double FREE_MEMORY_MULTIPLIER = 0.9;
     public static final int MAX_MERGE_FILES = 10;
     public static final int RUN_COUNT = 1;
     public static int MAX_SIZE_BYTES;
@@ -56,22 +57,22 @@ public class ExternalMerger {
 
     private static void createTmpDir() throws IOException {
         try {
-            Files.createDirectory(Paths.get("tmp/"));
+            Files.createDirectory(Paths.get(TMP_DIR));
         } catch (FileAlreadyExistsException ignored) {
         }
     }
 
     private static void sort() throws IOException {
         int outFilesCount = 0;
-        try (BufferedReader reader = new BufferedReader(new FileReader(INPUT_FILE_NAME), (int) (0.1 * MAX_SIZE_BYTES))) {
+        try (BufferedReader reader = new BufferedReader(new FileReader(INPUT_FILE_NAME), (int) (0.08 * MAX_SIZE_BYTES))) {
             print("Reading input file");
             String line;
             long currentSize = 0;
-            List<String> stringsToSort = new ArrayList<>(5000);
+            List<String> stringsToSort = new ArrayList<>(10000);
             while ((line = reader.readLine()) != null) {
                 stringsToSort.add(line);
                 currentSize += calcStringSizeBytes(line);
-                if (currentSize > 0.8 * MAX_SIZE_BYTES) {
+                if (currentSize > 0.7 * MAX_SIZE_BYTES) {
                     outFilesCount = sortAndPrintStrings(outFilesCount, stringsToSort);
                     stringsToSort.clear();
                     currentSize = 0;
@@ -124,12 +125,13 @@ public class ExternalMerger {
             int firstFileNum = i * MAX_MERGE_FILES;
             int lastFileNum = Math.min(outFilesCount - 1, (i + 1) * MAX_MERGE_FILES - 1);
             int count = lastFileNum - firstFileNum + 1;
-            try (PrintWriter pw = createPrintWriter(format(TMP_SORT_FILE_PATTERN, step, i), MAX_SIZE_BYTES / (2 * count))) {
+            int bufferSize = MAX_SIZE_BYTES / (3 * count);
+            try (PrintWriter pw = createPrintWriter(format(TMP_SORT_FILE_PATTERN, step, i), bufferSize)) {
                 print(format("Merging %d files", count));
                 PriorityQueue<FileIterator> heap = new PriorityQueue<>();
                 for (int j = firstFileNum; j <= lastFileNum; j++) {
                     heap.add(new FileIterator(new BufferedReader(new FileReader(format(TMP_SORT_FILE_PATTERN, step - 1, j)),
-                            MAX_SIZE_BYTES / (2 * count))));
+                            bufferSize)));
                 }
 
                 while (!heap.isEmpty()) {
